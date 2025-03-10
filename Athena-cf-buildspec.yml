@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Setup Athena Table from S3 data.
+Description: Setup Athena Table from S3 data with Lambda.
 
 Resources:
 
@@ -29,97 +29,126 @@ Resources:
                 Action: 's3:GetObject'
                 Resource: !Sub 'arn:aws:s3:::${MyS3Bucket}/*'
 
-  # Athena Workgroup
-  AthenaWorkgroup:
-    Type: 'AWS::Athena::WorkGroup'
+  # Lambda execution role to allow the Lambda function to interact with Athena and S3
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
     Properties:
-      Name: 'my-athena-workgroup'
-      State: 'ENABLED'
-      WorkGroupConfiguration:
-        ResultConfiguration:
-          OutputLocation: !Sub 's3://${MyS3Bucket}/athena/results/'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'LambdaAthenaS3Policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'athena:StartQueryExecution'
+                  - 'athena:GetQueryExecution'
+                  - 'athena:GetQueryResults'
+                  - 'athena:ListQueryExecutions'
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                Resource: "*"
 
-  # Athena Database
-  AthenaDatabase:
-    Type: 'AWS::Athena::Database'
+  # Lambda Function to create Athena database and table
+  AthenaCreateTableLambda:
+    Type: 'AWS::Lambda::Function'
     Properties:
-      Name: 'st-my_database'
+      Handler: 'index.handler'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      FunctionName: 'CreateAthenaDatabaseAndTable'
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import time
 
-  # Athena Table (example for CSV format, you can adapt this for other formats like Parquet)
-  AthenaTable:
-    Type: 'AWS::Athena::Table'
-    Properties:
-      DatabaseName: !Ref AthenaDatabase
-      TableName: 'st-my_table'
-      TableColumns:
-        - Name: 'id'
-          Type: 'int'
-        - Name: 'name'
-          Type: 'string'
-        - Name: 'age'
-          Type: 'int'
-        - Name: 'date'
-          Type: 'timestamp'
-      StorageDescriptor:
-        Columns:
-          - Name: 'id'
-            Type: 'int'
-          - Name: 'name'
-            Type: 'string'
-          - Name: 'age'
-            Type: 'int'
-          - Name: 'date'
-            Type: 'timestamp'
-        Location: !Sub 's3://${MyS3Bucket}/path/to/data/'
-        InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
-        OutputFormat: 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
-        SerdeInfo:
-          SerializationLibrary: 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-          Parameters:
-            'separatorChar': ','
+          athena_client = boto3.client('athena')
+          s3_client = boto3.client('s3')
 
-  # Athena Table Partition (if you have partitions, for example by year/month)
-  AthenaTablePartition:
-    Type: 'AWS::Athena::Table'
+          def handler(event, context):
+              database_name = "st_my_database"
+              table_name = "st_my_table"
+              bucket_name = "st-athena-bucket"
+              s3_data_location = f"s3://{bucket_name}/path/to/data/"
+              query = f"""
+              CREATE DATABASE IF NOT EXISTS {database_name};
+              CREATE EXTERNAL TABLE IF NOT EXISTS {database_name}.{table_name} (
+                id INT,
+                name STRING,
+                age INT,
+                date TIMESTAMP
+              )
+              ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+              WITH SERDEPROPERTIES ('separatorChar' = ',')
+              LOCATION '{s3_data_location}';
+              """
+
+              # Execute Athena query
+              try:
+                  response = athena_client.start_query_execution(
+                      QueryString=query,
+                      QueryExecutionContext={
+                          'Database': database_name
+                      },
+                      ResultConfiguration={
+                          'OutputLocation': f's3://{bucket_name}/athena/results/'
+                      }
+                  )
+
+                  # Wait for the query to complete
+                  query_execution_id = response['QueryExecutionId']
+                  while True:
+                      result = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+                      state = result['QueryExecution']['Status']['State']
+                      if state == 'SUCCEEDED':
+                          return {
+                              'statusCode': 200,
+                              'body': json.dumps(f"Query succeeded: {query_execution_id}")
+                          }
+                      elif state == 'FAILED':
+                          return {
+                              'statusCode': 500,
+                              'body': json.dumps(f"Query failed: {query_execution_id}")
+                          }
+                      else:
+                          time.sleep(5)
+              except Exception as e:
+                  return {
+                      'statusCode': 500,
+                      'body': json.dumps(str(e))
+                  }
+
+      Runtime: 'python3.8'
+      Timeout: 300 # 5 minutes
+
+  # CloudWatch Event Rule to trigger Lambda on Stack Creation
+  AthenaCreateTableTrigger:
+    Type: 'AWS::Events::Rule'
     Properties:
-      DatabaseName: !Ref AthenaDatabase
-      TableName: 'my_table'
-      PartitionKeys:
-        - Name: 'year'
-          Type: 'int'
-        - Name: 'month'
-          Type: 'int'
-      StorageDescriptor:
-        Columns:
-          - Name: 'id'
-            Type: 'int'
-          - Name: 'name'
-            Type: 'string'
-          - Name: 'age'
-            Type: 'int'
-          - Name: 'date'
-            Type: 'timestamp'
-        Location: !Sub 's3://${MyS3Bucket}/path/to/data/year=2023/month=03/'
-        InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
-        OutputFormat: 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
-        SerdeInfo:
-          SerializationLibrary: 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
-          Parameters:
-            'separatorChar': ','
+      Description: 'Trigger Lambda after CloudFormation Stack is created'
+      EventPattern:
+        Source:
+          - 'aws.cloudformation'
+        DetailType:
+          - 'AWS API Call via CloudTrail'
+        Detail:
+          eventSource: 'cloudformation.amazonaws.com'
+          eventName: 'CreateStack'
+      Targets:
+        - Arn: !GetAtt AthenaCreateTableLambda.Arn
+          Id: 'TargetFunctionV1'
 
 Outputs:
   S3BucketName:
     Description: 'S3 Bucket name for storing data'
     Value: !Ref MyS3Bucket
 
-  AthenaDatabaseName:
-    Description: 'Athena Database name'
-    Value: !Ref AthenaDatabase
-
-  AthenaTableName:
-    Description: 'Athena Table name'
-    Value: 'my_table'
-
-  AthenaWorkgroupName:
-    Description: 'Athena Workgroup name'
-    Value: !Ref AthenaWorkgroup
+  LambdaFunctionName:
+    Description: 'Lambda Function name for creating Athena table'
+    Value: !Ref AthenaCreateTableLambda
