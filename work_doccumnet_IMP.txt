@@ -11,12 +11,12 @@ def handler(event, context):
     bucket_name = "st-athena-bucket"
     s3_data_location = f"s3://{bucket_name}/path/to/data/"
 
-    # Create the database
+    # Query to create the database
     create_database_query = f"""
     CREATE DATABASE IF NOT EXISTS {database_name};
     """
 
-    # Create the external table
+    # Query to create the external table
     create_table_query = f"""
     CREATE EXTERNAL TABLE IF NOT EXISTS {database_name}.{table_name} (
       id INT,
@@ -29,56 +29,59 @@ def handler(event, context):
     LOCATION '{s3_data_location}';
     """
 
-    # Function to run Athena query
-    def run_athena_query(query):
+    # Function to execute a query
+    def execute_query(query):
         response = athena_client.start_query_execution(
             QueryString=query,
-            QueryExecutionContext={ 
-                'Database': database_name
-            },
-            ResultConfiguration={
-                'OutputLocation': f's3://{bucket_name}/athena/results/'
-            }
+            QueryExecutionContext={'Database': database_name},
+            ResultConfiguration={'OutputLocation': f's3://{bucket_name}/athena/results/'},
+            WorkGroup='my-athena-workgroup'  # Use the created workgroup
         )
-        query_execution_id = response['QueryExecutionId']
-        return query_execution_id
+        return response['QueryExecutionId']
 
-    # Run CREATE DATABASE query
     try:
-        query_execution_id = run_athena_query(create_database_query)
-        # Wait for the query to complete
+        # Execute CREATE DATABASE query
+        query_execution_id_1 = execute_query(create_database_query)
+
+        # Wait for the database creation query to complete
         while True:
-            result = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
-            state = result['QueryExecution']['Status']['State']
-            if state == 'SUCCEEDED':
-                # Once database is created, run the CREATE TABLE query
-                query_execution_id = run_athena_query(create_table_query)
-                while True:
-                    result = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
-                    state = result['QueryExecution']['Status']['State']
-                    if state == 'SUCCEEDED':
-                        return {
-                            'statusCode': 200,
-                            'body': json.dumps(f"Queries succeeded: {query_execution_id}")
-                        }
-                    elif state == 'FAILED':
-                        # Fetch detailed error message from the failed query execution
-                        error_message = result['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')
-                        return {
-                            'statusCode': 500,
-                            'body': json.dumps(f"Query failed: {query_execution_id}, Error: {error_message}")
-                        }
-                    else:
-                        time.sleep(5)
-            elif state == 'FAILED':
-                # Fetch detailed error message from the failed query execution
-                error_message = result['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')
+            result_1 = athena_client.get_query_execution(QueryExecutionId=query_execution_id_1)
+            state_1 = result_1['QueryExecution']['Status']['State']
+            if state_1 == 'SUCCEEDED':
+                print(f"Database creation query succeeded: {query_execution_id_1}")
+                break
+            elif state_1 == 'FAILED':
+                # Fetch the error message from the query execution result
+                error_message = result_1['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')
                 return {
                     'statusCode': 500,
-                    'body': json.dumps(f"Database creation failed: {query_execution_id}, Error: {error_message}")
+                    'body': json.dumps(f"Database creation query failed: {error_message}")
                 }
             else:
                 time.sleep(5)
+
+        # Execute CREATE TABLE query
+        query_execution_id_2 = execute_query(create_table_query)
+
+        # Wait for the table creation query to complete
+        while True:
+            result_2 = athena_client.get_query_execution(QueryExecutionId=query_execution_id_2)
+            state_2 = result_2['QueryExecution']['Status']['State']
+            if state_2 == 'SUCCEEDED':
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps(f"Table creation query succeeded: {query_execution_id_2}")
+                }
+            elif state_2 == 'FAILED':
+                # Fetch the error message from the query execution result
+                error_message = result_2['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')
+                return {
+                    'statusCode': 500,
+                    'body': json.dumps(f"Table creation query failed: {error_message}")
+                }
+            else:
+                time.sleep(5)
+
     except Exception as e:
         return {
             'statusCode': 500,
@@ -88,9 +91,7 @@ def handler(event, context):
 
 
 
-
-
-Lmabda policy :-
+----my-athena-cf-stack-LambdaExecutionRole-Tdrbe0UNiIUq 
 
 {
     "Version": "2012-10-17",
@@ -114,11 +115,71 @@ Lmabda policy :-
             "Effect": "Allow"
         },
         {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${MyS3Bucket}/*",
+                "arn:aws:s3:::${MyS3Bucket}"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "glue:CreateDatabase",
+                "glue:CreateTable",
+                "glue:UpdateTable",
+                "glue:GetTable",
+                "glue:GetTableVersion",
+                "glue:GetTableVersions",
+                "glue:GetDatabase"
+            ],
+            "Resource": [
+                "arn:aws:glue:eu-west-2:277707117797:catalog",
+                "arn:aws:glue:eu-west-2:277707117797:database/st_my_database",
+                "arn:aws:glue:eu-west-2:277707117797:table/st_my_database/*"
+            ]
+        },
+        {
             "Action": [
                 "logs:*"
             ],
             "Resource": "*",
             "Effect": "Allow"
+        }
+    ]
+}
+
+
+------ S3 policy 
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::277707117797:role/my-athena-cf-stack-LambdaExecutionRole-Tdrbe0UNiIUq"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::st-athena-bucket/*"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "athena.amazonaws.com"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::st-athena-bucket/*"
         }
     ]
 }

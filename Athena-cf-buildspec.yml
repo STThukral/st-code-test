@@ -9,6 +9,35 @@ Resources:
     Properties:
       BucketName: 'st-athena-bucket'
 
+  MyS3BucketPolicy:
+  Type: 'AWS::S3::BucketPolicy'
+  Properties:
+    Bucket: !Ref MyS3Bucket
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: 'Allow'
+          Action:
+            - s3:GetObject
+            - s3:ListBucket
+            - s3:PutObject
+          Resource:
+            - !Sub 'arn:aws:s3:::${MyS3Bucket}/*'   # Access to all objects inside the bucket
+            - !Sub 'arn:aws:s3:::${MyS3Bucket}'     # Access to the bucket itself
+        - Effect: 'Allow'
+          Action:
+            - s3:GetObject
+            - s3:ListBucket
+          Resource:
+            - !Sub 'arn:aws:s3:::${MyS3Bucket}/*'   # Athena access to read data from the bucket
+            - !Sub 'arn:aws:s3:::${MyS3Bucket}'     # Athena access to list objects in the bucket
+        - Effect: 'Allow'
+          Action:
+            - s3:PutObject
+          Resource:
+            - !Sub 'arn:aws:s3:::${MyS3Bucket}/athena/results/*'  # Athena access to write results to a specific folder
+
+
   # IAM Role to allow Athena to access the S3 bucket
   AthenaExecutionRole:
     Type: 'AWS::IAM::Role'
@@ -98,8 +127,14 @@ Resources:
               table_name = "st_my_table"
               bucket_name = "st-athena-bucket"
               s3_data_location = f"s3://{bucket_name}/path/to/data/"
-              query = f"""
+
+              # Query to create the database
+              create_database_query = f"""
               CREATE DATABASE IF NOT EXISTS {database_name};
+              """
+
+              # Query to create the external table
+              create_table_query = f"""
               CREATE EXTERNAL TABLE IF NOT EXISTS {database_name}.{table_name} (
                 id INT,
                 name STRING,
@@ -111,41 +146,65 @@ Resources:
               LOCATION '{s3_data_location}';
               """
 
-              # Execute Athena query
-              try:
+              # Function to execute a query
+              def execute_query(query):
                   response = athena_client.start_query_execution(
                       QueryString=query,
-                      QueryExecutionContext={ 
-                          'Database': database_name
-                      },
-                      ResultConfiguration={
-                          'OutputLocation': f's3://{bucket_name}/athena/results/'
-                      },
+                      QueryExecutionContext={'Database': database_name},
+                      ResultConfiguration={'OutputLocation': f's3://{bucket_name}/athena/results/'},
                       WorkGroup='my-athena-workgroup'  # Use the created workgroup
                   )
+                  return response['QueryExecutionId']
 
-                  # Wait for the query to complete
-                  query_execution_id = response['QueryExecutionId']
+              try:
+                  # Execute CREATE DATABASE query
+                  query_execution_id_1 = execute_query(create_database_query)
+
+                  # Wait for the database creation query to complete
                   while True:
-                      result = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
-                      state = result['QueryExecution']['Status']['State']
-                      if state == 'SUCCEEDED':
-                          return {
-                              'statusCode': 200,
-                              'body': json.dumps(f"Query succeeded: {query_execution_id}")
-                          }
-                      elif state == 'FAILED':
+                      result_1 = athena_client.get_query_execution(QueryExecutionId=query_execution_id_1)
+                      state_1 = result_1['QueryExecution']['Status']['State']
+                      if state_1 == 'SUCCEEDED':
+                          print(f"Database creation query succeeded: {query_execution_id_1}")
+                          break
+                      elif state_1 == 'FAILED':
+                          # Fetch the error message from the query execution result
+                          error_message = result_1['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')
                           return {
                               'statusCode': 500,
-                              'body': json.dumps(f"Query failed: {query_execution_id}")
+                              'body': json.dumps(f"Database creation query failed: {error_message}")
                           }
                       else:
                           time.sleep(5)
+
+                  # Execute CREATE TABLE query
+                  query_execution_id_2 = execute_query(create_table_query)
+
+                  # Wait for the table creation query to complete
+                  while True:
+                      result_2 = athena_client.get_query_execution(QueryExecutionId=query_execution_id_2)
+                      state_2 = result_2['QueryExecution']['Status']['State']
+                      if state_2 == 'SUCCEEDED':
+                          return {
+                              'statusCode': 200,
+                              'body': json.dumps(f"Table creation query succeeded: {query_execution_id_2}")
+                          }
+                      elif state_2 == 'FAILED':
+                          # Fetch the error message from the query execution result
+                          error_message = result_2['QueryExecution']['Status'].get('StateChangeReason', 'Unknown error')
+                          return {
+                              'statusCode': 500,
+                              'body': json.dumps(f"Table creation query failed: {error_message}")
+                          }
+                      else:
+                          time.sleep(5)
+
               except Exception as e:
                   return {
                       'statusCode': 500,
                       'body': json.dumps(str(e))
                   }
+
 
       Runtime: 'python3.8'
       Timeout: 300 # 5 minutes
