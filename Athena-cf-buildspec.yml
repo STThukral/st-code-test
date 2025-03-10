@@ -29,7 +29,7 @@ Resources:
                 Action: 's3:GetObject'
                 Resource: !Sub 'arn:aws:s3:::${MyS3Bucket}/*'
 
-  # Lambda execution role to allow the Lambda function to interact with Athena and S3
+  # IAM Role to allow the Lambda function to interact with Athena and S3
   LambdaExecutionRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -54,8 +54,13 @@ Resources:
                   - 's3:PutObject'
                   - 's3:GetObject'
                 Resource: "*"
-  # Athena Workgroup
-  AthenaWorkgroup:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:*'
+                Resource: "*"
+
+  # Athena Workgroup to specify for the Athena query execution
+  AthenaWorkGroup:
     Type: 'AWS::Athena::WorkGroup'
     Properties:
       Name: 'my-athena-workgroup'
@@ -63,7 +68,7 @@ Resources:
       WorkGroupConfiguration:
         ResultConfiguration:
           OutputLocation: !Sub 's3://${MyS3Bucket}/athena/results/'
-  
+
   # Lambda Function to create Athena database and table
   AthenaCreateTableLambda:
     Type: 'AWS::Lambda::Function'
@@ -102,13 +107,13 @@ Resources:
               try:
                   response = athena_client.start_query_execution(
                       QueryString=query,
-                      QueryExecutionContext={
+                      QueryExecutionContext={ 
                           'Database': database_name
                       },
                       ResultConfiguration={
                           'OutputLocation': f's3://{bucket_name}/athena/results/'
-                      }
-                      WorkGroup='my-athena-workgroup'  # Add this line to use the workgroup
+                      },
+                      WorkGroup='my-athena-workgroup'  # Use the created workgroup
                   )
 
                   # Wait for the query to complete
@@ -137,7 +142,6 @@ Resources:
       Runtime: 'python3.8'
       Timeout: 300 # 5 minutes
 
-  # CloudWatch Event Rule to trigger Lambda on Stack Creation
   # CloudWatch Event Rule to trigger Lambda on Stack Creation
   AthenaCreateTableTrigger:
     Type: 'AWS::Events::Rule'
