@@ -54,7 +54,16 @@ Resources:
                   - 's3:PutObject'
                   - 's3:GetObject'
                 Resource: "*"
-
+  # Athena Workgroup
+  AthenaWorkgroup:
+    Type: 'AWS::Athena::WorkGroup'
+    Properties:
+      Name: 'my-athena-workgroup'
+      State: 'ENABLED'
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://${MyS3Bucket}/athena/results/'
+  
   # Lambda Function to create Athena database and table
   AthenaCreateTableLambda:
     Type: 'AWS::Lambda::Function'
@@ -99,6 +108,7 @@ Resources:
                       ResultConfiguration={
                           'OutputLocation': f's3://{bucket_name}/athena/results/'
                       }
+                      WorkGroup='my-athena-workgroup'  # Add this line to use the workgroup
                   )
 
                   # Wait for the query to complete
