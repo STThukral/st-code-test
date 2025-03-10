@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Setup Athena Table from S3 data.
+
+Resources:
+
+  # S3 Bucket to store your data
+  MyS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'st-athena-bucket'
+
+  # IAM Role to allow Athena to access the S3 bucket
+  AthenaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'athena.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'AthenaS3AccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 's3:GetObject'
+                Resource: !Sub 'arn:aws:s3:::${MyS3Bucket}/*'
+
+  # Athena Workgroup
+  AthenaWorkgroup:
+    Type: 'AWS::Athena::WorkGroup'
+    Properties:
+      Name: 'my-athena-workgroup'
+      State: 'ENABLED'
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://${MyS3Bucket}/athena/results/'
+
+  # Athena Database
+  AthenaDatabase:
+    Type: 'AWS::Athena::Database'
+    Properties:
+      Name: 'st-my_database'
+
+  # Athena Table (example for CSV format, you can adapt this for other formats like Parquet)
+  AthenaTable:
+    Type: 'AWS::Athena::Table'
+    Properties:
+      DatabaseName: !Ref AthenaDatabase
+      TableName: 'st-my_table'
+      TableColumns:
+        - Name: 'id'
+          Type: 'int'
+        - Name: 'name'
+          Type: 'string'
+        - Name: 'age'
+          Type: 'int'
+        - Name: 'date'
+          Type: 'timestamp'
+      StorageDescriptor:
+        Columns:
+          - Name: 'id'
+            Type: 'int'
+          - Name: 'name'
+            Type: 'string'
+          - Name: 'age'
+            Type: 'int'
+          - Name: 'date'
+            Type: 'timestamp'
+        Location: !Sub 's3://${MyS3Bucket}/path/to/data/'
+        InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
+        OutputFormat: 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+        SerdeInfo:
+          SerializationLibrary: 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+          Parameters:
+            'separatorChar': ','
+
+  # Athena Table Partition (if you have partitions, for example by year/month)
+  AthenaTablePartition:
+    Type: 'AWS::Athena::Table'
+    Properties:
+      DatabaseName: !Ref AthenaDatabase
+      TableName: 'my_table'
+      PartitionKeys:
+        - Name: 'year'
+          Type: 'int'
+        - Name: 'month'
+          Type: 'int'
+      StorageDescriptor:
+        Columns:
+          - Name: 'id'
+            Type: 'int'
+          - Name: 'name'
+            Type: 'string'
+          - Name: 'age'
+            Type: 'int'
+          - Name: 'date'
+            Type: 'timestamp'
+        Location: !Sub 's3://${MyS3Bucket}/path/to/data/year=2023/month=03/'
+        InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
+        OutputFormat: 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+        SerdeInfo:
+          SerializationLibrary: 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+          Parameters:
+            'separatorChar': ','
+
+Outputs:
+  S3BucketName:
+    Description: 'S3 Bucket name for storing data'
+    Value: !Ref MyS3Bucket
+
+  AthenaDatabaseName:
+    Description: 'Athena Database name'
+    Value: !Ref AthenaDatabase
+
+  AthenaTableName:
+    Description: 'Athena Table name'
+    Value: 'my_table'
+
+  AthenaWorkgroupName:
+    Description: 'Athena Workgroup name'
+    Value: !Ref AthenaWorkgroup
