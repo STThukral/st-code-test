@@ -9,6 +9,35 @@ Resources:
     Properties:
       BucketName: 'st-athena-bucket'
 
+  # IAM Role for EventBridge (CloudWatch Events) to capture CloudFormation events
+  YourEventBridgeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'events.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      
+  # IAM Policy for EventBridge to capture CloudFormation events
+  EventBridgePermissionForCloudFormation:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: 'AllowEventBridgeToCaptureCloudFormationEvents'
+      Roles:
+        - !Ref YourEventBridgeRole  # The IAM Role for EventBridge to assume
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action: 'events:PutEvents'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': 'your-cloudformation-account-id'
+
   #MyS3BucketPolicy:
   #Type: 'AWS::S3::BucketPolicy'
   #Properties:
