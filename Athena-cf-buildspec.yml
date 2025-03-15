@@ -76,25 +76,46 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Effect: 'Allow'
-                Action:
-                 - athena:StartQueryExecution,
-                 - athena:GetQueryExecution,
-                 - athena:GetQueryResults,
-                 - athena:ListQueryExecutions,
-                 - s3:PutObject,
-                 - s3:GetObject,
-                 - s3:GetBucketLocation,
-                 - s3:ListBucket,
-                 - s3:ListBucketMultipartUploads,
-                 - s3:ListMultipartUploadParts,
-                 - s3:AbortMultipartUpload,
-                 - s3:CreateBucket
-                Resource: "*"
-              - Effect: 'Allow'
-                Action:
-                  - 'logs:*'
-                Resource: "*"
+               - Action:
+                   - "athena:StartQueryExecution"
+                   - "athena:GetQueryExecution"
+                   - "athena:GetQueryResults"
+                   - "athena:ListQueryExecutions"
+                   - "s3:PutObject"
+                   - "s3:GetObject"
+                   - "s3:GetBucketLocation"
+                   - "s3:ListBucket"
+                   - "s3:ListBucketMultipartUploads"
+                   - "s3:ListMultipartUploadParts"
+                   - "s3:AbortMultipartUpload"
+                   - "s3:CreateBucket"
+                 Resource: "*"
+                 Effect: "Allow"
+               - Effect: "Allow"
+                 Action:
+                   - "s3:GetObject"
+                   - "s3:PutObject"
+                   - "s3:ListBucket"
+                 Resource:
+                   - "arn:aws:s3:::${MyS3Bucket}/*"
+                   - "arn:aws:s3:::${MyS3Bucket}"
+               - Effect: "Allow"
+                 Action:
+                   - "glue:CreateDatabase"
+                   - "glue:CreateTable"
+                   - "glue:UpdateTable"
+                   - "glue:GetTable"
+                   - "glue:GetTableVersion"
+                   - "glue:GetTableVersions"
+                   - "glue:GetDatabase"
+                 Resource:
+                   - "arn:aws:glue:eu-west-2:277707117797:catalog"
+                   - "arn:aws:glue:eu-west-2:277707117797:database/st_my_database"
+                   - "arn:aws:glue:eu-west-2:277707117797:table/st_my_database/*"
+               - Action:
+                   - "logs:*"
+                 Resource: "*"
+                 Effect: "Allow"
 
   # Athena Workgroup to specify for the Athena query execution
   AthenaWorkGroup:
