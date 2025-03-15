@@ -249,6 +249,14 @@ Resources:
         - Arn: !GetAtt AthenaCreateTableLambda.Arn
           Id: 'TargetFunctionV1'
 
+  AthenaCreateTableLambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref AthenaCreateTableLambda
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt AthenaCreateTableTrigger.Arn    
+
 Outputs:
   S3BucketName:
     Description: 'S3 Bucket name for storing data'
