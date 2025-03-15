@@ -244,10 +244,7 @@ Resources:
           eventSource:
             - 'cloudformation.amazonaws.com'
           eventName:
-            - 'CreateStack'
-          requestParameters:
-          stackName:
-            - 'my-athena-cf-stack'  # Make sure to match the specific stack name  
+            - 'CreateStack'  
       Targets:
         - Arn: !GetAtt AthenaCreateTableLambda.Arn
           Id: 'TargetFunctionV1'
