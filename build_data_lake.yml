@@ -3,9 +3,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Resources:
   RawDataS3Bucket:
     Type: 'AWS::S3::Bucket'
-    #DeletionPolicy: Retain        # this will retain bucket even stack Deleted
+    #DeletionPolicy: Retain                        # this will retain bucket even stack Deleted
     Properties:
       BucketName: 'my-company-datalake-raw-data'
+      #VersioningConfiguration:                    # Enables multiple versions of all objects in this bucket
+      #  Status: Enabled
+      #AccessControl: Private                      # By defualt it is private we can make it public
 
   ProcessedDataS3Bucket:
     Type: 'AWS::S3::Bucket'
