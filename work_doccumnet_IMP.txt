@@ -201,6 +201,10 @@ Athena access policy :-
     ]
 }
 
+C:\sharad\CV\AWS_CV\Capgemini\AWS_CLI_work\github_work\st-code-test
+
+C:/sharad/CV/AWS_CV/Capgemini/AWS_CLI_work/github_work/st-code-test
+
 
 yashi@LAPTOP-3NEKT69J MINGW64 /c/sharad/CV/AWS_CV/Capgemini/AWS_CLI_work/github_work/st-code-test (dev)
 $ git add Athena-cf-buildspec.yml
