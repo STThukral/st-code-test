@@ -273,7 +273,8 @@ Resources:
           eventSource:
             - 'cloudformation.amazonaws.com'
           eventName:
-            - 'CreateStack'  
+            - 'CreateStack'
+            - 'UpdateStack'
       Targets:
         - Arn: !GetAtt AthenaCreateTableLambda.Arn
           Id: 'TargetFunctionV1'
