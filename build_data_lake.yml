@@ -1,8 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
 Resources:
-  S3Bucket:
+  RawDataS3Bucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Retain
+    #DeletionPolicy: Retain        # this will retain bucket even stack Deleted
     Properties:
       BucketName: 'my-company-datalake-raw-data'
+
+  ProcessedDataS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    #DeletionPolicy: Retain
+    Properties:
+      BucketName: 'my-company-datalake-processed-data'
