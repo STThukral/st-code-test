@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
 Resources:
+  # Step 1: Create S3 Bucket for Raw Data
   RawDataS3Bucket:
     Type: 'AWS::S3::Bucket'
     #DeletionPolicy: Retain                        # this will retain bucket even stack Deleted
@@ -10,6 +11,7 @@ Resources:
       #  Status: Enabled
       #AccessControl: Private                      # By defualt it is private we can make it public
 
+  # Step 1: Create S3 Bucket for Processed Data
   ProcessedDataS3Bucket:
     Type: 'AWS::S3::Bucket'
     #DeletionPolicy: Retain
