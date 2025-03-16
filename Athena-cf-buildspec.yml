@@ -36,7 +36,7 @@ Resources:
             Resource: '*'
             Condition:
               StringEquals:
-                'aws:SourceAccount': 'your-cloudformation-account-id'
+                'aws:SourceAccount': '277707117797'
 
   #MyS3BucketPolicy:
   #Type: 'AWS::S3::BucketPolicy'
