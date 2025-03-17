@@ -11,9 +11,16 @@ Resources:
       #  Status: Enabled
       #AccessControl: Private                      # By defualt it is private we can make it public
 
-  # Step 1: Create S3 Bucket for Processed Data
+  # Step 2: Create S3 Bucket for Processed Data
   ProcessedDataS3Bucket:
     Type: 'AWS::S3::Bucket'
     #DeletionPolicy: Retain
     Properties:
       BucketName: 'my-company-datalake-processed-data'
+
+  # Step 2: Create S3 Bucket for Curated Data
+  ProcessedDataS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    #DeletionPolicy: Retain
+    Properties:
+      BucketName: 'my-company-datalake-curated-data'
