@@ -19,7 +19,7 @@ Resources:
       BucketName: 'my-company-datalake-processed-data'
 
   # Step 3: Create S3 Bucket for Curated Data
-  ProcessedDataS3Bucket:
+  CuratedDataS3Bucket:
     Type: 'AWS::S3::Bucket'
     #DeletionPolicy: Retain
     Properties:
