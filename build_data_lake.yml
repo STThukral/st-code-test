@@ -32,7 +32,7 @@ Resources:
               - Effect: 'Allow'
                 Action:
                   - 's3:PutObject'
-                Resource: 'arn:aws:s3:::my-s3-bucket/*'
+                Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
 
   # Kinesis Firehose Delivery Stream to upload data to S3
   MyFirehoseDeliveryStream:
