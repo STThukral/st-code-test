@@ -78,4 +78,4 @@ Outputs:
 
   S3BucketName:
     Description: "S3 Bucket for Firehose to deliver data"
-    Value: !Ref MyS3Bucket
+    Value: !Ref RawDataS3Bucket
