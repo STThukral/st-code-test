@@ -33,6 +33,13 @@ Resources:
                 Action:
                   - 's3:PutObject'
                 Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
+                 # Allow Firehose to read from Kinesis Stream
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn  # Permissions for Kinesis Stream
 
   # Kinesis Firehose Delivery Stream to upload data to S3
   MyFirehoseDeliveryStream:
