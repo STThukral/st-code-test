@@ -51,11 +51,20 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "s3:PutObject"
+                  - "s3:ListBucket"   # Added permission to list the bucket
                 Resource: !Sub "arn:aws:s3:::${RawDataS3Bucket}/*"
               - Effect: "Allow"
                 Action:
                   - "kinesis:DescribeStream"
                 Resource: !GetAtt MyKinesisStream.Arn
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: 
+                  - arn:aws:logs:eu-west-2:277707117797:log-group:/aws/kinesisfirehose/logs:*
+
 
 
   # 4. Create Kinesis Firehose Delivery Stream
