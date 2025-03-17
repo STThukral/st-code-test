@@ -18,9 +18,16 @@ Resources:
     Properties:
       BucketName: 'my-company-datalake-processed-data'
 
-  # Step 2: Create S3 Bucket for Curated Data
+  # Step 3: Create S3 Bucket for Curated Data
   ProcessedDataS3Bucket:
     Type: 'AWS::S3::Bucket'
     #DeletionPolicy: Retain
     Properties:
       BucketName: 'my-company-datalake-curated-data'
+
+  MyStream: 
+    Type: AWS::Kinesis::Stream 
+    Properties: 
+        Name: st-raw-data-stream 
+        RetentionPeriodHours:  24 # 24 is default
+        ShardCount: 1 
