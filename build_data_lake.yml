@@ -62,7 +62,7 @@ Resources:
         KinesisStreamARN: !GetAtt MyKinesisStream.Arn
         RoleARN: !GetAtt FirehoseRole.Arn
       S3DestinationConfiguration:
-        BucketARN: !GetAtt MyS3Bucket.Arn
+        BucketARN: !GetAtt RawDataS3Bucket.Arn
         RoleARN: !GetAtt FirehoseRole.Arn
         Prefix: "data/"  # Optional: Prefix for S3 objects (e.g., "data/2025/")
         CompressionFormat: "UNCOMPRESSED"  # Can be GZIP, Snappy, or ZIP
