@@ -25,9 +25,57 @@ Resources:
     Properties:
       BucketName: 'my-company-datalake-curated-data'
 
-  MyStream: 
+  MyKinesisStream: 
     Type: AWS::Kinesis::Stream 
     Properties: 
         Name: st-raw-data-stream 
         RetentionPeriodHours:  24 # 24 is default
         ShardCount: 1 
+  
+  # 3. IAM Role for Kinesis Firehose to write to S3
+  FirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "firehose.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: FirehoseS3Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:PutObject"
+                Resource: !Sub "arn:aws:s3:::${RawDataS3Bucket}/*"
+
+  # 4. Create Kinesis Firehose Delivery Stream
+  MyFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "KinesisStreamAsSource"
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+      S3DestinationConfiguration:
+        BucketARN: !GetAtt MyS3Bucket.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+        Prefix: "data/"  # Optional: Prefix for S3 objects (e.g., "data/2025/")
+        CompressionFormat: "UNCOMPRESSED"  # Can be GZIP, Snappy, or ZIP
+
+Outputs:
+  KinesisStreamARN:
+    Description: "Kinesis Stream ARN"
+    Value: !GetAtt MyKinesisStream.Arn
+
+  FirehoseARN:
+    Description: "Kinesis Firehose ARN"
+    Value: !GetAtt MyFirehose.Arn
+
+  S3BucketName:
+    Description: "S3 Bucket for Firehose to deliver data"
+    Value: !Ref MyS3Bucket
