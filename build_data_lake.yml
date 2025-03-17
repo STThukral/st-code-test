@@ -52,6 +52,11 @@ Resources:
                 Action:
                   - "s3:PutObject"
                 Resource: !Sub "arn:aws:s3:::${RawDataS3Bucket}/*"
+              - Effect: "Allow"
+                Action:
+                  - "kinesis:DescribeStream"
+                Resource: !GetAtt MyKinesisStream.Arn
+
 
   # 4. Create Kinesis Firehose Delivery Stream
   MyFirehose:
