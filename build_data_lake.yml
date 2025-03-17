@@ -4,13 +4,13 @@ Resources:
   MyS3Bucket:
     Type: 'AWS::S3::Bucket'
     Properties:
-      BucketName: my-s3-bucket-raw
+      BucketName: my-s3-bucket
 
   # Kinesis Data Stream
   MyKinesisStream:
     Type: 'AWS::Kinesis::Stream'
     Properties:
-      Name: st-raw-data-stream
+      Name: my-kinesis-stream
       ShardCount: 1  # Number of shards in the stream
 
   # IAM Role for Kinesis Firehose to access S3
@@ -44,8 +44,9 @@ Resources:
         BucketARN: !GetAtt MyS3Bucket.Arn
         Prefix: 'firehose-data/'
         CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
-        BufferIntervalInSeconds: 300  # Buffer time before writing data
-        BufferSizeInMBs: 5  # Buffer size before writing data
+        BufferingHints:
+          IntervalInSeconds: 300  # Buffer time before writing data
+          SizeInMBs: 5  # Buffer size before writing data
 
 Outputs:
   S3BucketName:
