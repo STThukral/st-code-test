@@ -71,6 +71,11 @@ Resources:
         RoleARN: !GetAtt FirehoseRole.Arn
         Prefix: "data/"  # Optional: Prefix for S3 objects (e.g., "data/2025/")
         CompressionFormat: "UNCOMPRESSED"  # Can be GZIP, Snappy, or ZIP
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: "/aws/kinesisfirehose/logs"
+          LogStreamName: "FirehoseDeliveryStreamLogs"
+
 
 Outputs:
   KinesisStreamARN:
