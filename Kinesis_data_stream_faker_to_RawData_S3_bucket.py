@@ -11,7 +11,7 @@ fake = Faker()
 #  Run this script through GIT BASH as AWS conguraiotn already done using access_key and access_id
 
 # Configuration - Set your stream name and AWS region
-STREAM_NAME="st-raw-data-stream"
+STREAM_NAME="my-kinesis-stream"
 REGION="eu-west-2"
 
 # Set up the Kinesis client
