@@ -38,7 +38,7 @@ Resources:
   MyFirehoseDeliveryStream:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
     Properties:
-      DeliveryStreamType: 'DirectPut'
+      DeliveryStreamType: 'KinesisStreamAsSource'
       S3DestinationConfiguration:
         RoleARN: !GetAtt FirehoseRole.Arn
         BucketARN: !GetAtt MyS3Bucket.Arn
