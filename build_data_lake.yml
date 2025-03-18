@@ -44,23 +44,6 @@ Resources:
                   - 'kinesis:GetShardIterator'
                 Resource: !GetAtt MyKinesisStream.Arn  # Permissions for Kinesis Stream
 
-  # Kinesis Firehose Delivery Stream to upload data to S3
-  MyFirehoseDeliveryStream:
-    Type: 'AWS::KinesisFirehose::DeliveryStream'
-    Properties:
-      DeliveryStreamType: 'KinesisStreamAsSource'
-      KinesisStreamSourceConfiguration:
-        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
-        RoleARN: !GetAtt FirehoseRole.Arn
-      S3DestinationConfiguration:
-        RoleARN: !GetAtt FirehoseRole.Arn
-        BucketARN: !GetAtt MyS3Bucket.Arn
-        Prefix: 'firehose-data/{timestamp}/'  # Prefix that includes timestamp to organize by date
-        CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
-        BufferingHints:
-          IntervalInSeconds: 300  # Buffer time before writing data
-          SizeInMBs: 5  # Buffer size before writing data
-
   # Lambda Function to Rename Files in S3
   LambdaRenameFunction:
     Type: 'AWS::Lambda::Function'
@@ -83,6 +66,24 @@ Resources:
           - Event: 's3:ObjectCreated:*'  # Trigger on object creation
             Function: !GetAtt LambdaRenameFunction.Arn
 
+  
+  # Kinesis Firehose Delivery Stream to upload data to S3
+  MyFirehoseDeliveryStream:
+    Type: 'AWS::KinesisFirehose::DeliveryStream'
+    Properties:
+      DeliveryStreamType: 'KinesisStreamAsSource'
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+      S3DestinationConfiguration:
+        RoleARN: !GetAtt FirehoseRole.Arn
+        BucketARN: !GetAtt MyS3Bucket.Arn
+        Prefix: 'firehose-data/{timestamp}/'  # Prefix that includes timestamp to organize by date
+        CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
+        BufferingHints:
+          IntervalInSeconds: 300  # Buffer time before writing data
+          SizeInMBs: 5  # Buffer size before writing data
+          
   # Lambda Execution Role
   LambdaExecutionRole:
     Type: 'AWS::IAM::Role'
