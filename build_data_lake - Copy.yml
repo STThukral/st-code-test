@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  # S3 Bucket to store data
+  MyS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: my-s3-bucket-raw
+
+  # Kinesis Data Stream
+  MyKinesisStream:
+    Type: 'AWS::Kinesis::Stream'
+    Properties:
+      Name: my-kinesis-stream
+      ShardCount: 1  # Number of shards in the stream
+
+  # IAM Role for Kinesis Firehose to access S3
+  FirehoseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'firehose.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'FirehoseToS3Policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:PutObject'
+                Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
+                 # Allow Firehose to read from Kinesis Stream
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn  # Permissions for Kinesis Stream
+
+  # Kinesis Firehose Delivery Stream to upload data to S3
+  MyFirehoseDeliveryStream:
+    Type: 'AWS::KinesisFirehose::DeliveryStream'
+    Properties:
+      DeliveryStreamType: 'KinesisStreamAsSource'
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+      S3DestinationConfiguration:
+        RoleARN: !GetAtt FirehoseRole.Arn
+        BucketARN: !GetAtt MyS3Bucket.Arn
+        Prefix: 'firehose-data/'
+        CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
+        BufferingHints:
+          IntervalInSeconds: 300  # Buffer time before writing data
+          SizeInMBs: 5  # Buffer size before writing data
+
+Outputs:
+  S3BucketName:
+    Description: 'S3 Bucket Name'
+    Value: !Ref MyS3Bucket
+
+  KinesisStreamName:
+    Description: 'Kinesis Data Stream Name'
+    Value: !Ref MyKinesisStream
+
+  FirehoseDeliveryStreamName:
+    Description: 'Kinesis Firehose Delivery Stream Name'
+    Value: !Ref MyFirehoseDeliveryStream
