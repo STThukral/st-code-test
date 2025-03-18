@@ -5,7 +5,7 @@ Parameters:
     Type: String
     Default: 'my-s3-code-bucket-2025'
 
-  S3Bucket:
+  MyS3Bucket:
     Type: String
     Default: 'my-s3-bucket-raw'
 
@@ -74,10 +74,10 @@ Resources:
       Runtime: 'python3.8'
 
   # S3 Bucket to store Lambda code
-  MyS3Bucket:
+  MyBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
-      BucketName: !Ref S3Bucket
+      BucketName: !Ref MyS3Bucket
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'  # Trigger on object creation
@@ -109,7 +109,7 @@ Resources:
 Outputs:
   S3BucketName:
     Description: 'S3 Bucket Name'
-    Value: !Ref MyS3Bucket
+    Value: !Ref MyBucket
 
   KinesisStreamName:
     Description: 'Kinesis Data Stream Name'
