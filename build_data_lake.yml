@@ -74,10 +74,10 @@ Resources:
       Runtime: 'python3.8'
 
   # S3 Bucket to store Lambda code
-  MyS3CodeBucket:
+  MyS3Bucket:
     Type: 'AWS::S3::Bucket'
     Properties:
-      BucketName: !Ref S3CodeBucket
+      BucketName: !Ref S3Bucket
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'  # Trigger on object creation
