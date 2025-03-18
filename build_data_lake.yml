@@ -77,7 +77,7 @@ Resources:
         RoleARN: !GetAtt FirehoseRole.Arn
       S3DestinationConfiguration:
         RoleARN: !GetAtt FirehoseRole.Arn
-        BucketARN: !GetAtt MyBucket.Arn
+        BucketARN: !Sub 'arn:aws:s3:::${MyBucket}'
         Prefix: 'firehose-data/{timestamp}/'  # Prefix that includes timestamp to organize by date
         CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
         BufferingHints:
