@@ -1,15 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-
-Parameters:
-  S3CodeBucket:
-    Type: String
-    Default: 'my-s3-code-bucket-2025'
-
-  MyS3Bucket:
-    Type: String
-    Default: 'my-s3-bucket-raw'
-
 Resources:
+  # S3 Bucket to store data
+  MyS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: my-s3-bucket-raw
+
   # Kinesis Data Stream
   MyKinesisStream:
     Type: 'AWS::Kinesis::Stream'
@@ -37,6 +33,7 @@ Resources:
                 Action:
                   - 's3:PutObject'
                 Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
+                 # Allow Firehose to read from Kinesis Stream
               - Effect: 'Allow'
                 Action:
                   - 'kinesis:DescribeStream'
@@ -44,29 +41,6 @@ Resources:
                   - 'kinesis:GetShardIterator'
                 Resource: !GetAtt MyKinesisStream.Arn  # Permissions for Kinesis Stream
 
-  # Lambda Function to Rename Files in S3
-  LambdaRenameFunction:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      FunctionName: 'RenameS3Files'
-      Handler: 'index.lambda_handler'
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Code:
-        S3Bucket: 'my-s3-code-bucket-2025'  # Replace with your Lambda code S3 bucket
-        S3Key: 'rename-s3-files.zip'  # Replace with your Lambda code ZIP file key
-      Runtime: 'python3.8'
-
-  # S3 Bucket to store Lambda code
-  MyBucket:
-    Type: 'AWS::S3::Bucket'
-    Properties:
-      BucketName: !Ref MyS3Bucket
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: 's3:ObjectCreated:*'  # Trigger on object creation
-            Function: !GetAtt LambdaRenameFunction.Arn
-
-  
   # Kinesis Firehose Delivery Stream to upload data to S3
   MyFirehoseDeliveryStream:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
@@ -77,40 +51,17 @@ Resources:
         RoleARN: !GetAtt FirehoseRole.Arn
       S3DestinationConfiguration:
         RoleARN: !GetAtt FirehoseRole.Arn
-        BucketARN: !Sub 'arn:aws:s3:::${MyBucket}'
-        Prefix: 'firehose-data/{timestamp}/'  # Prefix that includes timestamp to organize by date
+        BucketARN: !GetAtt MyS3Bucket.Arn
+        Prefix: 'firehose-data/'
         CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
         BufferingHints:
           IntervalInSeconds: 300  # Buffer time before writing data
           SizeInMBs: 5  # Buffer size before writing data
 
-  # Lambda Execution Role
-  LambdaExecutionRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service: 'lambda.amazonaws.com'
-            Action: 'sts:AssumeRole'
-      Policies:
-        - PolicyName: 'S3RenamePolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 's3:GetObject'
-                  - 's3:PutObject'
-                  - 's3:DeleteObject'
-                Resource: 'arn:aws:s3:::my-s3-code-bucket-2025/*'
-
 Outputs:
   S3BucketName:
     Description: 'S3 Bucket Name'
-    Value: !Ref MyBucket
+    Value: !Ref MyS3Bucket
 
   KinesisStreamName:
     Description: 'Kinesis Data Stream Name'
