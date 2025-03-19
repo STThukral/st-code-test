@@ -1,9 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Parameters:
-  FirehoseName:
-    Type: String
-    Default: "my-kinesis-Firehose"
-    Description: "The name of the Kinesis Firehose delivery stream."
 
 Resources:
   # S3 Bucket to store data
@@ -18,79 +13,6 @@ Resources:
     Properties:
       Name: my-kinesis-stream
       ShardCount: 1  # Number of shards in the stream
-
-  # IAM Role for Kinesis Firehose to access S3
-  FirehoseRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service: 'firehose.amazonaws.com'
-            Action: 'sts:AssumeRole'
-      Policies:
-        - PolicyName: 'FirehoseToS3Policy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 's3:PutObject'
-                Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
-                 # Allow Firehose to read from Kinesis Stream
-              - Effect: 'Allow'
-                Action:
-                  - 'kinesis:DescribeStream'
-                  - 'kinesis:GetRecords'
-                  - 'kinesis:GetShardIterator'
-                Resource: !GetAtt MyKinesisStream.Arn  # Permissions for Kinesis Stream
-
-  # Lambda Function to process Kinesis data and send to Firehose
-  MyKinesisLambda:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      FunctionName: 'ProcessKinesisDataAndSendToFirehose'
-      Handler: 'index.lambda_handler'
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Runtime: 'python3.8'  # Use the runtime that matches your Lambda code
-      Code:
-        S3Bucket: 'my-st-code-bucket'  # Replace with your actual bucket
-        S3Key: 'rename-s3-files.zip'  # Replace with your actual Lambda code key
-      Timeout: 360  # Set a suitable timeout
-
-  # Event Source Mapping to trigger Lambda when data arrives in Kinesis Stream
-  KinesisLambdaEventSource:
-    Type: 'AWS::Lambda::EventSourceMapping'
-    Properties:
-      BatchSize: 100  # Adjust batch size as needed
-      EventSourceArn: !GetAtt MyKinesisStream.Arn
-      FunctionName: !GetAtt MyKinesisLambda.Arn
-      StartingPosition: 'TRIM_HORIZON'  # Start processing from the earliest record
-
-  # Kinesis Firehose Delivery Stream to upload data to S3
-  MyFirehoseDeliveryStream:
-    Type: 'AWS::KinesisFirehose::DeliveryStream'
-    Properties:
-      DeliveryStreamName: !Ref FirehoseName  # Use the parameter for Firehose name
-      DeliveryStreamType: 'KinesisStreamAsSource'
-      KinesisStreamSourceConfiguration:
-        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
-        RoleARN: !GetAtt FirehoseRole.Arn
-      ProcessingConfiguration:
-        Enabled: true
-        ProcessingLambdaFunction:
-          RoleARN: !GetAtt FirehoseRole.Arn
-          LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
-      S3DestinationConfiguration:
-        RoleARN: !GetAtt FirehoseRole.Arn
-        BucketARN: !GetAtt MyS3Bucket.Arn
-        Prefix: 'firehose-data/'
-        CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
-        BufferingHints:
-          IntervalInSeconds: 300  # Buffer time before writing data
-          SizeInMBs: 5  # Buffer size before writing data
 
   # IAM Role for Lambda to read from Kinesis and write to Firehose
   LambdaExecutionRole:
@@ -120,7 +42,76 @@ Resources:
                   - 'firehose:PutRecordBatch'
                 Resource: !GetAtt MyFirehoseDeliveryStream.Arn
 
-  
+  # Lambda Function to process Kinesis data and send to Firehose
+  MyKinesisLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: 'ProcessKinesisDataAndSendToFirehose'
+      Handler: 'index.lambda_handler'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: 'python3.8'  # Use the runtime that matches your Lambda code
+      Code:
+        S3Bucket: 'your-lambda-code-bucket'  # Replace with your actual bucket
+        S3Key: 'lambda-code.zip'  # Replace with your actual Lambda code key
+      Timeout: 60  # Set a suitable timeout
+
+  # Event Source Mapping to trigger Lambda when data arrives in Kinesis Stream
+  KinesisLambdaEventSource:
+    Type: 'AWS::Lambda::EventSourceMapping'
+    Properties:
+      BatchSize: 100  # Adjust batch size as needed
+      EventSourceArn: !GetAtt MyKinesisStream.Arn
+      FunctionName: !GetAtt MyKinesisLambda.Arn
+      StartingPosition: 'TRIM_HORIZON'  # Start processing from the earliest record
+
+  # IAM Role for Kinesis Firehose to access S3
+  FirehoseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'firehose.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'FirehoseToS3Policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:PutObject'
+                Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn
+
+  # Kinesis Firehose Delivery Stream to upload data to S3
+  MyFirehoseDeliveryStream:
+    Type: 'AWS::KinesisFirehose::DeliveryStream'
+    Properties:
+      DeliveryStreamType: 'KinesisStreamAsSource'
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+      ProcessingConfiguration:
+        Enabled: true
+        ProcessingLambdaFunction:
+          RoleARN: !GetAtt FirehoseRole.Arn
+          LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
+      S3DestinationConfiguration:
+        RoleARN: !GetAtt FirehoseRole.Arn
+        BucketARN: !GetAtt MyS3Bucket.Arn
+        Prefix: 'firehose-data/'
+        CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
+        BufferingHints:
+          IntervalInSeconds: 300  # Buffer time before writing data
+          SizeInMBs: 5  # Buffer size before writing data
 
 Outputs:
   S3BucketName:
