@@ -51,7 +51,7 @@ Resources:
   MyFirehoseDeliveryStream:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
     Properties:
-      Name: !Ref FirehoseName  # Use the parameter for Firehose name
+      DeliveryStreamType: !Ref FirehoseName  # Use the parameter for Firehose name
       DeliveryStreamType: 'KinesisStreamAsSource'
       KinesisStreamSourceConfiguration:
         KinesisStreamARN: !GetAtt MyKinesisStream.Arn
