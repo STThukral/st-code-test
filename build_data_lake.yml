@@ -1,4 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  FirehoseName:
+    Type: String
+    Default: "my-kinesis-Firehose"
+    Description: "The name of the Kinesis Firehose delivery stream."
+
 Resources:
   # S3 Bucket to store data
   MyS3Bucket:
@@ -45,7 +51,7 @@ Resources:
   MyFirehoseDeliveryStream:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
     Properties:
-      Name: my-kinesis-Firehose
+      Name: !Ref FirehoseName  # Use the parameter for Firehose name
       DeliveryStreamType: 'KinesisStreamAsSource'
       KinesisStreamSourceConfiguration:
         KinesisStreamARN: !GetAtt MyKinesisStream.Arn
