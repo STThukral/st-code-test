@@ -99,22 +99,32 @@ Resources:
           IntervalInSeconds: 300  # Buffer time before writing data
           SizeInMBs: 5  # Buffer size before writing data
   
-  Policies:
-    - PolicyName: 'KinesisToFirehosePolicy'
-      PolicyDocument:
+  KinesisToFirehoseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: 'Allow'
-            Action:
-              - 'kinesis:DescribeStream'
-              - 'kinesis:GetRecords'
-              - 'kinesis:GetShardIterator'
-            Resource: !GetAtt MyKinesisStream.Arn
-          - Effect: 'Allow'
-            Action:
-              - 'firehose:PutRecord'
-              - 'firehose:PutRecordBatch'
-            Resource: !GetAtt MyFirehoseDeliveryStream.Arn
+            Principal:
+              Service: 'firehose.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'KinesisToFirehosePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn
+              - Effect: 'Allow'
+                Action:
+                  - 'firehose:PutRecord'
+                  - 'firehose:PutRecordBatch'
+                Resource: !GetAtt MyFirehoseDeliveryStream.Arn
 
 
 Outputs:
