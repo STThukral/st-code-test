@@ -25,22 +25,7 @@ Resources:
             Principal:
               Service: 'lambda.amazonaws.com'
             Action: 'sts:AssumeRole'
-      Policies:
-        - PolicyName: 'KinesisToFirehosePolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'kinesis:DescribeStream'
-                  - 'kinesis:GetRecords'
-                  - 'kinesis:GetShardIterator'
-                Resource: !GetAtt MyKinesisStream.Arn
-              - Effect: 'Allow'
-                Action:
-                  - 'firehose:PutRecord'
-                  - 'firehose:PutRecordBatch'
-                Resource: !GetAtt MyFirehoseDeliveryStream.Arn
+      
 
   # Lambda Function to process Kinesis data and send to Firehose
   MyKinesisLambda:
@@ -51,8 +36,8 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: 'python3.8'  # Use the runtime that matches your Lambda code
       Code:
-        S3Bucket: 'your-lambda-code-bucket'  # Replace with your actual bucket
-        S3Key: 'lambda-code.zip'  # Replace with your actual Lambda code key
+        S3Bucket: 'st-my-code-bucket'  # Replace with your actual bucket
+        S3Key: 'rename-s3-files.zip'  # Replace with your actual Lambda code key
       Timeout: 60  # Set a suitable timeout
 
   # Event Source Mapping to trigger Lambda when data arrives in Kinesis Stream
@@ -95,6 +80,7 @@ Resources:
   MyFirehoseDeliveryStream:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
     Properties:
+      DeliveryStreamName: 'my-kinesis-Firehose'
       DeliveryStreamType: 'KinesisStreamAsSource'
       KinesisStreamSourceConfiguration:
         KinesisStreamARN: !GetAtt MyKinesisStream.Arn
@@ -112,6 +98,24 @@ Resources:
         BufferingHints:
           IntervalInSeconds: 300  # Buffer time before writing data
           SizeInMBs: 5  # Buffer size before writing data
+  
+  Policies:
+        - PolicyName: 'KinesisToFirehosePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn
+              - Effect: 'Allow'
+                Action:
+                  - 'firehose:PutRecord'
+                  - 'firehose:PutRecordBatch'
+                Resource: !GetAtt MyFirehoseDeliveryStream.Arn
+
 
 Outputs:
   S3BucketName:
