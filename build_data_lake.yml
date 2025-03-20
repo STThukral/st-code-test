@@ -25,7 +25,7 @@ Resources:
             Principal:
               Service: 'lambda.amazonaws.com'
             Action: 'sts:AssumeRole'
-    Policies:
+    InlinePolicies:
       - PolicyName: 'KinesisToFirehosePolicy'
         PolicyDocument:
           Version: '2012-10-17'
@@ -71,7 +71,7 @@ Resources:
             Principal:
               Service: 'firehose.amazonaws.com'
             Action: 'sts:AssumeRole'
-      Policies:
+      InlinePolicies:
         - PolicyName: 'FirehoseToS3Policy'
           PolicyDocument:
             Version: '2012-10-17'
