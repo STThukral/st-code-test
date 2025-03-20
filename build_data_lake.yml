@@ -69,4 +69,87 @@ Resources:
         Statement:
           - Effect: 'Allow'
             Principal:
-              Service: 'fireho
+              Service: 'firehose.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'FirehoseToS3Policy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:PutObject'
+                Resource: 'arn:aws:s3:::my-s3-bucket-raw/*'
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn
+
+  # Kinesis Firehose Delivery Stream to upload data to S3
+  MyFirehoseDeliveryStream:
+    Type: 'AWS::KinesisFirehose::DeliveryStream'
+    Properties:
+      DeliveryStreamName: 'my-kinesis-Firehose'
+      DeliveryStreamType: 'KinesisStreamAsSource'
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+      ProcessingConfiguration:
+        Enabled: true
+        ProcessingLambdaFunction:
+          RoleARN: !GetAtt FirehoseRole.Arn
+          LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
+      S3DestinationConfiguration:
+        RoleARN: !GetAtt FirehoseRole.Arn
+        BucketARN: !GetAtt MyS3Bucket.Arn
+        Prefix: 'firehose-data/'
+        CompressionFormat: 'UNCOMPRESSED'  # You can change this to GZIP or Snappy
+        BufferingHints:
+          IntervalInSeconds: 300  # Buffer time before writing data
+          SizeInMBs: 5  # Buffer size before writing data
+  
+  KinesisToFirehoseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'firehose.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      # Attach policy directly to the Role
+      Policies:
+        - PolicyName: 'KinesisToFirehosePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Kinesis-specific actions
+              - Effect: 'Allow'
+                Action:
+                  - 'kinesis:DescribeStream'
+                  - 'kinesis:GetRecords'
+                  - 'kinesis:GetShardIterator'
+                Resource: !GetAtt MyKinesisStream.Arn
+
+              # Firehose-specific actions
+              - Effect: 'Allow'
+                Action:
+                  - 'firehose:PutRecord'
+                  - 'firehose:PutRecordBatch'
+                Resource: !GetAtt MyFirehoseDeliveryStream.Arn
+
+Outputs:
+  S3BucketName:
+    Description: 'S3 Bucket Name'
+    Value: !Ref MyS3Bucket
+
+  KinesisStreamName:
+    Description: 'Kinesis Data Stream Name'
+    Value: !Ref MyKinesisStream
+
+  FirehoseDeliveryStreamName:
+    Description: 'Kinesis Firehose Delivery Stream Name'
+    Value: !Ref MyFirehoseDeliveryStream
