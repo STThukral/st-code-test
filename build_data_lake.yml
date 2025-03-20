@@ -26,16 +26,16 @@ Resources:
               Service: 'lambda.amazonaws.com'
             Action: 'sts:AssumeRole'
     Policies:
-        - PolicyName: 'KinesisToFirehosePolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'kinesis:DescribeStream'
-                  - 'kinesis:GetRecords'
-                  - 'kinesis:GetShardIterator'
-                Resource: !GetAtt MyKinesisStream.Arn
+      - PolicyName: 'KinesisToFirehosePolicy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'kinesis:DescribeStream'
+                - 'kinesis:GetRecords'
+                - 'kinesis:GetShardIterator'
+              Resource: !GetAtt MyKinesisStream.Arn
       
 
   # Lambda Function to process Kinesis data and send to Firehose
