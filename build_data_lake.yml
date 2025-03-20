@@ -37,6 +37,12 @@ Resources:
                   - 'kinesis:GetRecords'
                   - 'kinesis:GetShardIterator'
                 Resource: !GetAtt MyKinesisStream.Arn
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
 
   # Lambda Function to process Kinesis data and send to Firehose
   MyKinesisLambda:
@@ -92,10 +98,11 @@ Resources:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
     Properties:
       DeliveryStreamName: 'my-kinesis-Firehose'
-      DeliveryStreamType: 'KinesisStreamAsSource'
-      KinesisStreamSourceConfiguration:
-        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
-        RoleARN: !GetAtt FirehoseRole.Arn
+      #DeliveryStreamType: 'KinesisStreamAsSource'
+      DeliveryStreamType: 'DirectPut'  # Use DirectPut instead of KinesisStreamAsSource
+      #KinesisStreamSourceConfiguration:
+      #  KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+      #  RoleARN: !GetAtt FirehoseRole.Arn
       #ProcessingConfiguration:
       #  Enabled: true
       #  ProcessingLambdaFunction:
