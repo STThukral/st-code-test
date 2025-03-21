@@ -14,6 +14,21 @@ Resources:
       Name: my-kinesis-stream
       ShardCount: 1  # Number of shards in the stream
 
+  
+
+  # Lambda Function to process Kinesis data and send to Firehose
+  MyKinesisLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: 'ProcessKinesisDataAndSendToFirehose'
+      Handler: 'index.lambda_handler'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: 'python3.8'  # Use the runtime that matches your Lambda code
+      Code:
+        S3Bucket: 'st-my-code-bucket'  # Replace with your actual bucket
+        S3Key: 'rename-s3-files.zip'  # Replace with your actual Lambda code key
+      Timeout: 60  # Set a suitable timeout
+  
   # IAM Role for Lambda to read from Kinesis and write to Firehose
   LambdaExecutionRole:
     Type: 'AWS::IAM::Role'
@@ -49,19 +64,10 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: 'arn:aws:logs:*:*:*'
-
-  # Lambda Function to process Kinesis data and send to Firehose
-  MyKinesisLambda:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      FunctionName: 'ProcessKinesisDataAndSendToFirehose'
-      Handler: 'index.lambda_handler'
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Runtime: 'python3.8'  # Use the runtime that matches your Lambda code
-      Code:
-        S3Bucket: 'st-my-code-bucket'  # Replace with your actual bucket
-        S3Key: 'rename-s3-files.zip'  # Replace with your actual Lambda code key
-      Timeout: 60  # Set a suitable timeout
+              - Effect: 'Allow'
+                Action:
+                  - 'lambda:InvokeFunction'
+                Resource: !GetAtt MyKinesisLambda.Arn  # Allow Lambda to be invoked by Firehose
 
   # Event Source Mapping to trigger Lambda when data arrives in Kinesis Stream
   KinesisLambdaEventSource:
