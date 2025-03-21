@@ -108,11 +108,11 @@ Resources:
       KinesisStreamSourceConfiguration:
         KinesisStreamARN: !GetAtt MyKinesisStream.Arn
         RoleARN: !GetAtt FirehoseRole.Arn
-      ProcessingConfiguration:
-        Enabled: true
-        ProcessingLambdaFunction:
-          RoleARN: !GetAtt FirehoseRole.Arn
-          LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
+      #ProcessingConfiguration:
+      #  Enabled: true
+      #  ProcessingLambdaFunction:
+      #    RoleARN: !GetAtt FirehoseRole.Arn
+      #    LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
       S3DestinationConfiguration:
         RoleARN: !GetAtt FirehoseRole.Arn
         BucketARN: !GetAtt MyS3Bucket.Arn
