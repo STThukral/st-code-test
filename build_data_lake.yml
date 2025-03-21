@@ -36,7 +36,13 @@ Resources:
                   - 'kinesis:DescribeStream'
                   - 'kinesis:GetRecords'
                   - 'kinesis:GetShardIterator'
-                Resource: !GetAtt MyKinesisStream.Arn
+                #Resource: !GetAtt MyKinesisStream.Arn
+                "Resource": "arn:aws:kinesis:eu-west-2:277707117797:stream/my-kinesis-stream"
+              - Effect: 'Allow'
+                Action:
+                  - 'firehose:PutRecord'
+                  - 'firehose:PutRecordBatch'
+                "Resource": "arn:aws:firehose:eu-west-2:277707117797:deliverystream/my-kinesis-Firehose"
               - Effect: 'Allow'
                 Action:
                   - 'logs:CreateLogGroup'
@@ -98,16 +104,15 @@ Resources:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
     Properties:
       DeliveryStreamName: 'my-kinesis-Firehose'
-      #DeliveryStreamType: 'KinesisStreamAsSource'
-      DeliveryStreamType: 'DirectPut'  # Use DirectPut instead of KinesisStreamAsSource
-      #KinesisStreamSourceConfiguration:
-      #  KinesisStreamARN: !GetAtt MyKinesisStream.Arn
-      #  RoleARN: !GetAtt FirehoseRole.Arn
-      #ProcessingConfiguration:
-      #  Enabled: true
-      #  ProcessingLambdaFunction:
-      #    RoleARN: !GetAtt FirehoseRole.Arn
-      #    LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
+      DeliveryStreamType: 'KinesisStreamAsSource'  # This allows Firehose to get data from Kinesis Stream
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt MyKinesisStream.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+      ProcessingConfiguration:
+        Enabled: true
+        ProcessingLambdaFunction:
+          RoleARN: !GetAtt FirehoseRole.Arn
+          LambdaFunctionARN: !GetAtt MyKinesisLambda.Arn
       S3DestinationConfiguration:
         RoleARN: !GetAtt FirehoseRole.Arn
         BucketARN: !GetAtt MyS3Bucket.Arn
