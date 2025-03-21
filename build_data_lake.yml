@@ -107,8 +107,9 @@ Resources:
               - Effect: 'Allow'
                 Action:
                   - 'lambda:InvokeFunction'
-                Resource: !GetAtt MyKinesisLambda.Arn  # Firehose needs permission to invoke this Lambda function
-
+                #Resource: !GetAtt MyKinesisLambda.Arn  # Firehose needs permission to invoke this Lambda function
+                Resource: arn:aws:lambda:eu-west-2:277707117797:function:ProcessKinesisDataAndSendToFirehose
+                 
   # Kinesis Firehose Delivery Stream to upload data to S3
   MyFirehoseDeliveryStream:
     Type: 'AWS::KinesisFirehose::DeliveryStream'
