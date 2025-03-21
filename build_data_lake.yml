@@ -104,6 +104,10 @@ Resources:
                   - 'kinesis:GetRecords'
                   - 'kinesis:GetShardIterator'
                 Resource: !GetAtt MyKinesisStream.Arn
+              - Effect: 'Allow'
+                Action:
+                  - 'lambda:InvokeFunction'
+                Resource: !GetAtt MyKinesisLambda.Arn  # Firehose needs permission to invoke this Lambda function
 
   # Kinesis Firehose Delivery Stream to upload data to S3
   MyFirehoseDeliveryStream:
